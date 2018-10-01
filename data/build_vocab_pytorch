@@ -1,0 +1,98 @@
+"""
+Created on 25/09/18.
+Author: morgan
+Copyright defined in text_classification/LICENSE.txt
+"""
+from collections import Counter
+import os
+import nltk
+import re
+import pickle
+from torchtext import data
+import random
+from hparams import HyperParameters as hp
+from torchtext.vocab import Vectors, GloVe
+from collections import Counter
+import os
+import nltk
+import re
+import pickle
+from torchtext import data
+import random
+from hparams import HyperParameters as hp
+from torchtext.vocab import Vectors, GloVe
+
+def clean_str(sentence):
+    # clean unmeaningful words
+    sentence = re.sub(r"[^A-Za-z0-9(),!?\'\`]", " ", sentence)
+    sentence = re.sub(r"\'s", " \'s", sentence)
+    sentence = re.sub(r"\'ve", " \'ve", sentence)
+    sentence = re.sub(r"n\'t", " not", sentence)
+    sentence = re.sub(r"\'re", " \'re", sentence)
+    sentence = re.sub(r"\'d", " \'d", sentence)
+    sentence = re.sub(r"\'ll", " \'ll", sentence)
+    sentence = re.sub(r",", " , ", sentence)
+    sentence = re.sub(r"!", " ! ", sentence)
+    sentence = re.sub(r"\(", " \( ", sentence)
+    sentence = re.sub(r"\)", " \) ", sentence)
+    sentence = re.sub(r"\?", " \? ", sentence)
+    sentence = re.sub(r"\s{2,}", " ", sentence)
+    return sentence.strip().lower()
+
+
+
+def validation_split(examples, shuffle, split_factor=0.7):
+    if shuffle:
+        random.shuffle(examples)
+    cut_index = int(len(examples) * split_factor)
+    train_examples = examples[:cut_index]
+    validation_examples = examples[cut_index:]
+
+    return train_examples, validation_examples
+
+import torch
+def load_mr_dataset(pos_path, neg_path):
+    tokenize = lambda x: x.split()
+    TEXT = data.Field(sequential=True, tokenize=tokenize, lower=True, batch_first=True, fix_length=hp.max_len)
+    LABEL = data.LabelField(tensor_type=torch.FloatTensor)
+    fields = [('text', TEXT), ('label', LABEL)]
+    examples = []
+    with open(pos_path, errors='ignore') as f:
+        for line in f:
+            if line != '':
+                examples.append(data.Example.fromlist([clean_str(line), 1], fields))
+
+    with open(neg_path, errors='ignore') as f:
+        for line in f:
+            if line != '':
+                examples.append(data.Example.fromlist([clean_str(line), 0], fields))
+
+    train_examples, dev_examples = validation_split(examples, True, 0.7)
+
+    train = data.Dataset(train_examples, fields)
+    dev = data.Dataset(dev_examples, fields)
+    # print(train_examples[0].text)
+    # print(train_examples[0].label)
+
+    # vocab
+    TEXT.build_vocab(train.text, dev.text, vectors=GloVe(name='6B', dim=300))
+    LABEL.build_vocab(train.label, dev.label)
+    # print(TEXT.vocab.stoi)
+    # print(LABEL.vocab.stoi)
+    word_embeddings = TEXT.vocab.vectors
+    train_iter1, dev_iter1 = data.BucketIterator.splits((train, dev), batch_size=hp.batch_size,
+                                                        sort_key=lambda x:len(x.text),
+                                                        device=0, # device=0
+                                                        repeat=False,
+                                                        shuffle=True)
+
+    return train_iter1, dev_iter1, TEXT, word_embeddings
+
+# for testing
+# path = os.getcwd()
+# # path = os.path.dirname(path)
+# pos_path = os.path.join(path, "data/positive.txt")
+# neg_path = os.path.join(path, "data/negative.txt")
+# print('pos path :', pos_path)
+# load_mr_dataset(pos_path, neg_path)
+

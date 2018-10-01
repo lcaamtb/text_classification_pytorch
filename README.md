@@ -1,10 +1,16 @@
 # text_classification_pytorch
-Models in pytorch for text classification
+A Pytorch Implementation of CNN, RNN, LSTM, Self Attention for text classification
 
-# files
+# requirements
 <ul>
-<li>hparams.py</li>
-<li>main_pytorch.py: includes train_model and eval_model</li>
-<li>models: contains cnn, rnn, lstm etc</li>
+<li>torch>=0.4.0</li>
+<li>torchtext>=0.2.3</li>
+</ul>
+
+# file description
+<ul>
+<li>hparams.py includes all hyper parameters that are needed in models</li>
+<li>main.py includes train and evaluationg procedures for a specific model</li>
+<li>models has all models for text classification such as cnn, rnn, lstm, self-attention etc.</li>
 </ul>
 
